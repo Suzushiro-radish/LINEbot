@@ -1,46 +1,29 @@
-from flask import Flask, request, abort
+import json
+import urllib.request
 
-from linebot import (
-    LineBotApi, WebhookHandler
-)
-from linebot.exceptions import (
-    InvalidSignatureError
-)
-from linebot.models import (
-    MessageEvent, TextMessage, TextSendMessage,
-)
+def lambda_handler(event, context):
+    for message_event in json.loads(event['body'])['events']:
+        url = 'https://api.line.me/v2/bot/message/reply'
+        headers = {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + {あなたのチャンネルアクセストークン}
+        }
+        body = {
+            'replyToken': message_event['replyToken'],
+            'messages': [
+                {
+                    "type": "text",
+                    "text": message_event['message']['text'],
+                }
+            ]
+        }
 
-app = Flask(__name__)
-
-line_bot_api = LineBotApi('YOUR_CHANNEL_ACCESS_TOKEN')
-handler = WebhookHandler('YOUR_CHANNEL_SECRET')
-
-
-@app.route("/callback", methods=['POST'])
-def callback():
-    # get X-Line-Signature header value
-    signature = request.headers['X-Line-Signature']
-
-    # get request body as text
-    body = request.get_data(as_text=True)
-    app.logger.info("Request body: " + body)
-
-    # handle webhook body
-    try:
-        handler.handle(body, signature)
-    except InvalidSignatureError:
-        print("Invalid signature. Please check your channel access token/channel secret.")
-        abort(400)
-
-    return 'OK'
+        req = urllib.request.Request(url, data=json.dumps(body).encode('utf-8'), method='POST', headers=headers)
+        with urllib.request.urlopen(req) as res:
+            logger.info(res.read().decode("utf-8"))
 
 
-@handler.add(MessageEvent, message=TextMessage)
-def handle_message(event):
-    line_bot_api.reply_message(
-        event.reply_token,
-        TextSendMessage(text=event.message.text))
-
-
-if __name__ == "__main__":
-    app.run()
+    return {
+        'statusCode': 200,
+        'body': json.dumps('Hello from Lambda!')
+    }
